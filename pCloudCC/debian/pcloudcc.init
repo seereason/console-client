@@ -19,7 +19,7 @@
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="pcloudcc"
 NAME=pcloudcc
-DAEMON=/usr/sbin/pcloudcc
+DAEMON=/usr/bin/pcloudcc
 DAEMON_ARGS=""
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
@@ -29,6 +29,12 @@ SCRIPTNAME=/etc/init.d/$NAME
 
 # Read configuration variable file if it is present
 [ -r /etc/default/$NAME ] && . /etc/default/$NAME
+
+[ -n "$USERNAME" ] || {
+    echo "Please set USERNAME=<pcloudaccountid> in /etc/default/pcloudcc, then";
+    echo "run $SCRIPTNAME password, then try starting again."; exit 1; }
+
+DAEMON_ARGS="$DAEMON_ARGS --username $USERNAME"
 
 # Load the VERBOSE setting and other rcS variables
 . /lib/init/vars.sh
@@ -49,7 +55,7 @@ do_start()
 	#   2 if daemon could not be started
 	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
 		|| return 1
-	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON -- \
+	start-stop-daemon --start --quiet --pidfile $PIDFILE --background --exec $DAEMON -- \
 		$DAEMON_ARGS \
 		|| return 2
 	# The above code will not work for interpreted scripts, use the next
@@ -156,9 +162,12 @@ case "$1" in
 		;;
 	esac
 	;;
+  password)
+	# Prompt for a password and save it in the pcloudcc database
+	$DAEMON $DAEMON_ARGS --savepassword
+	;;
   *)
-	#echo "Usage: $SCRIPTNAME {start|stop|restart|reload|force-reload}" >&2
-	echo "Usage: $SCRIPTNAME {start|stop|status|restart|force-reload}" >&2
+	echo "Usage: $SCRIPTNAME {start|stop|status|restart|force-reload|password}" >&2
 	exit 3
 	;;
 esac
